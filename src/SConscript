@@ -1,0 +1,20 @@
+import os 
+
+def get_sources(dir_list):
+	matches = []
+	for dir in dir_list:
+		matches.append(Glob(dir + '/*.cpp'))
+	return matches
+
+env = Environment( ENV = {'PATH' : os.environ['PATH']} 
+                 , CXX = 'g++'
+                 , CCFLAGS = '-wextra'
+                 , CPPPATH = ['.', 'external_dependencies'])
+
+env.Program('examples/examples', get_sources( [ 'examples' ] ))
+
+env.Program('test/test'        , get_sources( [ 'test'
+                                              , 'test/buffer'
+                                              , 'test/detail'
+                                              , 'test/encoding_decoding'
+                                              , 'test/types' ] ))
