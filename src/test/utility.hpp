@@ -42,6 +42,26 @@ namespace detail {
 		return bytes;
 	}
 
+	/*
+	 * var_width_encoded_bytes
+	 */
+
+	template<typename T>
+	std::vector<shift::uint8_t> var_width_encoded_bytes(T x) {
+		std::vector<shift::uint8_t> result;
+		do {
+			shift::byte_type encoded_byte = x % 128;
+			x /= 128;
+			encoded_byte = (x > 0) ? encoded_byte | 128 : encoded_byte;
+			result.push_back(encoded_byte);
+		} while (x > 0);
+		return result;
+	}
+
+	/*
+	 * check_buffer_content
+	 */
+
 	template<shift::endianness Endianness>
 	void check_buffer_content                      (const unsigned int pos, const std::vector<shift::byte_type>& bytes, const shift::byte_type* buffer);
 
@@ -50,6 +70,40 @@ namespace detail {
 
 	template<>
 	void check_buffer_content<shift::big_endian   >(const unsigned int pos, const std::vector<shift::byte_type>& bytes, const shift::byte_type* buffer);
+
+
+	/*
+	 * encoded_size_checker
+	 */
+
+	template<typename SizeType, shift::endianness Endianness>
+	struct encoded_size_checker {
+		static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
+			const std::vector<shift::byte_type> vec = to_bytes<SizeType>(n);
+			test::detail::check_buffer_content<Endianness>(start_pos, vec, buffer);
+			return vec;
+		}
+	};
+
+	template<shift::endianness Endianness>
+	struct encoded_size_checker<shift::variable_length, Endianness> {
+		static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
+			const std::vector<shift::byte_type> vec = detail::var_width_encoded_bytes(n);
+			for (unsigned int b=0; b<vec.size(); ++b)
+				CHECK(buffer[start_pos + b] == vec[b]);
+			return vec;
+		}
+	};
+
+	template<shift::endianness Endianness>
+	struct encoded_size_checker<shift::no_size_field, Endianness> {
+		static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
+			return std::vector<shift::byte_type>();
+		}
+	};
+
+
+
 
 	template<typename ValueType, shift::endianness Endianness>
 	void check_encoded_content(ValueType value, const shift::byte_type* buffer, unsigned int pos) {

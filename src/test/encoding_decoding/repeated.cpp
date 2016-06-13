@@ -18,45 +18,6 @@
 
 namespace test { namespace {
 
-template<typename T>
-std::vector<shift::uint8_t> var_width_encoded_bytes(T x) {
-	std::vector<shift::uint8_t> result;
-	do {
-		shift::byte_type encoded_byte = x % 128;
-		x /= 128;
-		encoded_byte = (x > 0) ? encoded_byte | 128 : encoded_byte;
-		result.push_back(encoded_byte);
-	} while (x > 0);
-	return result;
-}
-
-template<typename SizeType, shift::endianness Endianness>
-struct encoded_size_checker {
-	static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
-		const std::vector<shift::byte_type> vec = test::detail::to_bytes<SizeType>(n);
-		test::detail::check_buffer_content<Endianness>(start_pos, vec, buffer);
-		return vec;
-	}
-};
-
-template<shift::endianness Endianness>
-struct encoded_size_checker<shift::variable_length, Endianness> {
-	static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
-		const std::vector<shift::byte_type> vec = var_width_encoded_bytes(n);
-		for (unsigned int b=0; b<vec.size(); ++b)
-			CHECK(buffer[start_pos + b] == vec[b]);
-		return vec;
-	}
-};
-
-template<shift::endianness Endianness>
-struct encoded_size_checker<shift::no_size_field, Endianness> {
-	static std::vector<shift::byte_type> check(unsigned long n, const shift::byte_type* buffer, unsigned long start_pos ) {
-		return std::vector<shift::byte_type>();
-	}
-};
-
-
 template<typename SizeType, typename ValueType, shift::endianness Endianness>
 void check_size_encoding(unsigned int n, unsigned int start_pos) {
 
@@ -75,7 +36,7 @@ void check_size_encoding(unsigned int n, unsigned int start_pos) {
 		sink << shift::buffer_position(start_pos)
 		     << shift::orepeated<size_type, typename container_type::const_iterator>(v.begin(), v.end());
 
-		const std::vector<shift::byte_type> encoded_size = encoded_size_checker<SizeType, Endianness>::check(n, sink.buffer(), start_pos);
+		const std::vector<shift::byte_type> encoded_size = detail::encoded_size_checker<SizeType, Endianness>::check(n, sink.buffer(), start_pos);
 		CHECK(sink.size() == start_pos + encoded_size.size() + n * sizeof(ValueType));
 
 	} catch (shift::out_of_range& e) {
@@ -95,7 +56,7 @@ struct size_encoder {
 template<shift::endianness Endianness>
 struct size_encoder<shift::variable_length, Endianness> {
 	static unsigned int encode(unsigned int n, shift::byte_type* buffer, unsigned int start_pos) {
-		const std::vector<shift::byte_type> bytes = var_width_encoded_bytes(n);
+		const std::vector<shift::byte_type> bytes = detail::var_width_encoded_bytes(n);
 		std::copy(bytes.begin(), bytes.end(), buffer + start_pos);
 		return bytes.size();
 	}
@@ -157,7 +118,7 @@ template<typename SizeType, typename ValueType, shift::endianness Endianness, ty
 void check_encoded_content(SinkType& sink, IteratorType begin, IteratorType end, unsigned int start_pos) {
 	const unsigned long n = std::distance(begin, end);
 
-	const std::vector<shift::byte_type> encoded_size = encoded_size_checker<SizeType, Endianness>::check(n, sink.buffer(), start_pos);
+	const std::vector<shift::byte_type> encoded_size = detail::encoded_size_checker<SizeType, Endianness>::check(n, sink.buffer(), start_pos);
 	CHECK(sink.size() == start_pos + encoded_size.size() + n * sizeof(ValueType));
 
 	check_encoded_content<ValueType, Endianness>( begin
@@ -360,7 +321,6 @@ TEST_CASE( "the number of repeated values encoded with a fixed width unsigned in
 }
 
 TEST_CASE( "repeated values can be streamed to a sink starting at specified location using the << and the % operator, "
-           "c-array, ----"
          , "[repeated]" )
 {
 	{
