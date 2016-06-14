@@ -2,6 +2,7 @@
 #define SHIFT_OPERATOR_STRING_
 
 #include <shift/sink.hpp>
+#include <shift/types/cstdint.hpp>
 #include <shift/detail/size_encoding.hpp>
 
 namespace shift {
@@ -26,6 +27,11 @@ sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, Buff
 	typedef sink<EncodingEndianness, BufferType> sink_type;
 	const unsigned int length = str.encode_size(sink_);
 	return detail::ostream_operator_interface<sink_type>::write_array(sink_, reinterpret_cast<const byte_type*>(str.str.c_str()), length);
+}
+
+template<endianness EncodingEndianness, typename BufferType>
+sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, BufferType>& sink_, const std::string& str) {
+	return sink_ << ostring<shift::uint16_t>(str);
 }
 
 ///
