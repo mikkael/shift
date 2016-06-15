@@ -36,6 +36,66 @@ sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, Buff
 
 ///
 
+template<typename SizeType>
+class istring {
+public:
+	explicit istring(std::string& str) : str(str) {}
+	mutable std::string& str;
+private:
+	template<endianness EncodingEndianness, typename SizeType_>
+	friend source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const istring<SizeType_>& str_);
+
+	template<typename SourceType>
+	unsigned int decode_size(SourceType& source) const {
+		return detail::size_decoder<SizeType>::decode_size(source);
+	}
+};
+
+template<>
+class istring<no_size_field> {
+public:
+	istring(std::string& str, unsigned int size) :str(str), size(size) {}
+	mutable std::string& str;
+	const unsigned int size;
+private:
+	template<endianness EncodingEndianness, typename SizeType_>
+	friend source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const istring<SizeType_>& str_);
+
+	template<typename SourceType>
+	unsigned int decode_size(SourceType& sink) const {
+		return size;
+	}
+};
+
+template<unsigned int Size>
+class istring<static_size<Size> > {
+public:
+	explicit istring(std::string& str) : str(str) {}
+	mutable std::string& str;
+	static const unsigned int size = Size;
+private:
+	template<endianness EncodingEndianness, typename SizeType_>
+	friend source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const istring<SizeType_>& str_);
+
+	template<typename SourceType>
+	unsigned int decode_size(SourceType& sink) const {
+		return size;
+	}
+};
+
+template<endianness EncodingEndianness, typename SizeType>
+source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const istring<SizeType>& str_) {
+	const unsigned int length = str_.decode_size(source_);
+	std::pair<const shift::byte_type*, const shift::byte_type*> block = detail::istream_operator_interface<source<EncodingEndianness> >::get_array(source_, length);
+	str_.str.assign(reinterpret_cast<const char*>(block.first), reinterpret_cast<const char*>(block.second));
+	return source_;
+}
+
+template<endianness EncodingEndianness>
+source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, std::string& str_) {
+	return source_ >> istring<shift::uint16_t>(str_);
+}
+
 }
 
 #endif // SHIFT_OPERATOR_STRING_
