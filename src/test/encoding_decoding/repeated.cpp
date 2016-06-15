@@ -44,31 +44,6 @@ void check_size_encoding(unsigned int n, unsigned int start_pos) {
 	}
 }
 
-template<typename SizeType, shift::endianness Endianness>
-struct size_encoder {
-	static unsigned int encode(unsigned int n, shift::byte_type* buffer, unsigned int start_pos) {
-		const std::vector<shift::byte_type> bytes = test::detail::to_bytes<SizeType>(n);
-		test::detail::copy_to_buffer<Endianness>(start_pos, bytes, buffer);
-		return bytes.size();
-	}
-};
-
-template<shift::endianness Endianness>
-struct size_encoder<shift::variable_length, Endianness> {
-	static unsigned int encode(unsigned int n, shift::byte_type* buffer, unsigned int start_pos) {
-		const std::vector<shift::byte_type> bytes = detail::var_width_encoded_bytes(n);
-		std::copy(bytes.begin(), bytes.end(), buffer + start_pos);
-		return bytes.size();
-	}
-};
-
-template<unsigned int N, shift::endianness Endianness>
-struct size_encoder<shift::static_size<N>, Endianness> {
-	static unsigned int encode(unsigned int n, shift::byte_type* buffer, unsigned int start_pos) {
-		return 0;
-	}
-};
-
 template<typename SizeType, typename ValueType, shift::endianness Endianness>
 void check_size_decoding(unsigned int n, unsigned int start_pos) {
 
@@ -79,7 +54,7 @@ void check_size_decoding(unsigned int n, unsigned int start_pos) {
 	shift::byte_type buffer[buffer_size];
 	source_type source(buffer, buffer_size);
 
-	size_encoder<SizeType, Endianness>::encode(n, buffer, start_pos);
+	detail::size_encoder<SizeType, Endianness>::encode(n, buffer, start_pos);
 
 	try {
 		container_type v;
@@ -182,7 +157,7 @@ void check_decoding(unsigned int start_pos, IteratorType begin, IteratorType end
 	const unsigned int n = std::distance(begin, end);
 	typedef shift::source<Endianness> source_type;
 
-	unsigned int n_bytes_encodes_size = size_encoder<SizeType, Endianness>::encode(n, buffer, start_pos);
+	unsigned int n_bytes_encodes_size = detail::size_encoder<SizeType, Endianness>::encode(n, buffer, start_pos);
 
 	place_content_in_buffer<ValueType, Endianness>( begin
 	                                              , end
@@ -274,7 +249,7 @@ TEST_CASE( "the size of repeated fields is correctly encoded for fixed width siz
 	check_size_encoding<shift::no_size_field  , shift::uint32_t, shift::big_endian   >(255,  10);
 }
 
-TEST_CASE( "the number of repeated values encoded with a fixed width unsigned integer can be decoded"
+TEST_CASE( "the number of repeated values is correctly decoded for fixed with unsigned integers & variable length"
          , "[repeated]" )
 {
 	const unsigned int maxui16 = std::numeric_limits<shift::uint16_t>::max();
@@ -305,9 +280,9 @@ TEST_CASE( "the number of repeated values encoded with a fixed width unsigned in
 	check_size_decoding<shift::variable_length   , shift::uint8_t , shift::big_endian   >(  33333,    0);
 
 	check_size_decoding<shift::static_size<    0>, shift::uint8_t , shift::little_endian>(      0,   33);
-	check_size_decoding<shift::static_size<100>  , float          , shift::big_endian   >(    100,  100);
-	check_size_decoding<shift::static_size<33>   , double         , shift::little_endian>(     33,   42);
-	check_size_decoding<shift::static_size<255>  , shift::uint32_t, shift::big_endian   >(    255,   10);
+	check_size_decoding<shift::static_size<  100>, float          , shift::big_endian   >(    100,  100);
+	check_size_decoding<shift::static_size<   33>, double         , shift::little_endian>(     33,   42);
+	check_size_decoding<shift::static_size<  255>, shift::uint32_t, shift::big_endian   >(    255,   10);
 	check_size_decoding<shift::static_size<   15>, float          , shift::big_endian   >(     15, 1024);
 	check_size_decoding<shift::static_size<  333>, double         , shift::little_endian>(    333,   79);
 	check_size_decoding<shift::static_size<  255>, shift::uint32_t, shift::big_endian   >(    255,    3);
