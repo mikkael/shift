@@ -157,6 +157,42 @@ void check_decoding(const std::string& str, unsigned int start_pos) {
 	}
 }
 
+template<shift::endianness Endianness>
+void check_std_string_decoding(const std::string& str, unsigned int start_pos) {
+
+	const unsigned int buffer_size = 100000;
+	shift::byte_type buffer[buffer_size];
+	std::memset(buffer, 0, buffer_size);
+	const unsigned int n = str.length();
+	typedef shift::source<Endianness> source_type;
+
+	unsigned int n_bytes_encoded_size = detail::size_encoder<shift::uint16_t, Endianness>::encode(n, buffer, start_pos);
+	std::memcpy(buffer + start_pos + n_bytes_encoded_size, str.c_str(), n);
+
+	source_type source(buffer, buffer_size);
+
+	try {
+		std::string result;
+		source >> shift::pos(start_pos) >> result;
+		CHECK(result.length() == n);
+		CHECK(result == str);
+	} catch (shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+
+	try {
+		std::string result;
+		source % shift::pos(start_pos) % result;
+		CHECK(result.length() == n);
+		CHECK(result == str);
+	} catch (shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+}
+
+
 TEST_CASE( "strings can be streamed to a sink starting at specified location using the << and the % operator, "
          , "[string, ostring, encoding]" )
 {
@@ -294,6 +330,27 @@ TEST_CASE( "strings can be extracted from a source starting at specified locatio
 	check_decoding<shift::static_size<462>, shift::big_endian   >(test_string,   0);
 	check_decoding<shift::static_size<462>, shift::little_endian>(test_string, 333);
 	check_decoding<shift::static_size<462>, shift::big_endian   >(test_string, 333);
+}
+
+TEST_CASE( "std strings can be extracted from a source starting at specified location using the << and the % operator"
+         , "[string, decoding]" )
+{
+	check_std_string_decoding<shift::little_endian>("hello, world", 0);
+	check_std_string_decoding<shift::big_endian   >("hello, world", 0);
+	check_std_string_decoding<shift::little_endian>("hello, world", 3);
+	check_std_string_decoding<shift::big_endian   >("hello, world", 3);
+
+	const std::string test_string =
+		"Lorem ipsum dolor sit amet, consectetur adipiscing elit.Fusce facilisis tellus quis scelerisque "
+		"eleifend. Sed consequat luctus lacus sed lobortis. Pellentesque eget libero eros. Pellentesque at "
+		"augue lacinia, malesuada odio quis, scelerisque purus. Fusce sit amet tortor ut augue eleifend "
+		"sodales. Mauris volutpat imperdiet euismod. Curabitur et aliquet est. Nunc sed laoreet neque, at "
+		"placerat mauris. Duis blandit egestas massa, a ultricies augue vulputate ac.";
+
+	check_std_string_decoding<shift::little_endian>(test_string,   0);
+	check_std_string_decoding<shift::big_endian   >(test_string,   0);
+	check_std_string_decoding<shift::little_endian>(test_string, 333);
+	check_std_string_decoding<shift::big_endian   >(test_string, 333);
 }
 
 TEST_CASE( "when writing a string to a stream, only the specified range in the buffer is modified"
