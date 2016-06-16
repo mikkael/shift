@@ -7,6 +7,7 @@
 #include <shift/types/fixed_width_uint.hpp>
 #include <shift/buffer/static_buffer.hpp>
 #include <shift/operator/universal.hpp>
+#include <shift/operator/uint.hpp>
 
 #include <test/utility.hpp>
 #include <examples/utility.hpp>
@@ -78,6 +79,77 @@ void test_encode_decode_fixed_width_uint(const UintType value, const shift::buff
 	}
 }
 
+template<typename UintType, unsigned int NBits>
+void test_encode_decode_uint_wrapper(const UintType value, const shift::buffer_position& pos)
+{
+	REQUIRE(value < (1 << NBits));
+
+	typedef shift::static_buffer<64> buffer_t;
+	typedef shift::sink<shift::little_endian, buffer_t> sink_t;
+	typedef shift::source<shift::little_endian> source_t;
+	typedef shift::fixed_width_uint<UintType, NBits> uint_t;
+
+	try {
+		sink_t sink;
+		sink << pos << shift::ouint<UintType, NBits>(value);
+		CHECK(get_bits<UintType>(sink.buffer(), pos, NBits) == value);
+
+		UintType result;
+		source_t source(sink.buffer(), sink.size());
+		source >> pos >> shift::iuint<UintType, NBits>(result);
+		CHECK(result == value);
+	} catch (const shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " "<< 	e.file() << " line " << e.line()
+		          << " value: " << value << " pos: " << pos.byte_index << ", " << pos.bit_index << std::endl;
+	}
+
+	try {
+		sink_t sink;
+		sink << pos << shift::uint<NBits>(value);
+		CHECK(get_bits<UintType>(sink.buffer(), pos, NBits) == value);
+
+		UintType result;
+		source_t source(sink.buffer(), sink.size());
+		source >> pos >> shift::uint<NBits>(result);
+		CHECK(result == value);
+	} catch (const shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " "<< 	e.file() << " line " << e.line()
+		          << " value: " << value << " pos: " << pos.byte_index << ", " << pos.bit_index << std::endl;
+	}
+
+	try {
+		sink_t sink;
+		sink % pos % shift::ouint<UintType, NBits>(value);
+		CHECK(get_bits<UintType>(sink.buffer(), pos, NBits) == value);
+
+		UintType result;
+		source_t source(sink.buffer(), sink.size());
+		source % pos % shift::iuint<UintType, NBits>(result);
+		CHECK(result == value);
+	} catch (const shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " "<< 	e.file() << " line " << e.line()
+		          << " value: " << value << " pos: " << pos.byte_index << ", " << pos.bit_index << std::endl;
+	}
+
+	try {
+		sink_t sink;
+		sink % pos % shift::uint<NBits>(value);
+		CHECK(get_bits<UintType>(sink.buffer(), pos, NBits) == value);
+
+		UintType result;
+		source_t source(sink.buffer(), sink.size());
+		source % pos % shift::uint<NBits>(result);
+		CHECK(result == value);
+	} catch (const shift::out_of_range& e) {
+		CHECK(false);
+		std::cout << e.what() << " "<< 	e.file() << " line " << e.line()
+		          << " value: " << value << " pos: " << pos.byte_index << ", " << pos.bit_index << std::endl;
+	}
+}
+
 template<typename T>
 T max_v(T n_bits) { return ( 1 << n_bits) - 1; }
 
@@ -107,8 +179,6 @@ TEST_CASE( "fixed_width_uint<>: encoding and decoding"
          , "fixed_width_uint<> can be streamed to a sink in specified locations using the << and the % operator"
            "fixed_width_uint<> can be streamed out of a source from specified locations using the >> and the % operator")
 {
-	shift::fixed_width_uint<unsigned char, 2> v1;
-
 	test_encode_decode_fixed_width_uint<unsigned char,   2>(        0, shift::buffer_position( 0, 2));
 	test_encode_decode_fixed_width_uint<unsigned char,   2>(        1, shift::buffer_position(17, 1));
 	test_encode_decode_fixed_width_uint<unsigned char,   2>(        2, shift::buffer_position(38, 7));
@@ -138,6 +208,38 @@ TEST_CASE( "fixed_width_uint<>: encoding and decoding"
 	test_encode_decode_fixed_width_uint<unsigned int,   27>(   917291, shift::buffer_position(7,  2));
 	test_encode_decode_fixed_width_uint<unsigned int,   27>(  1234567, shift::buffer_position(56, 6));
 	test_encode_decode_fixed_width_uint<unsigned int,   27>(max_v(27), shift::buffer_position(60, 2));
+
+	//
+
+	test_encode_decode_uint_wrapper    <unsigned char,   2>(        0, shift::buffer_position( 0, 2));
+	test_encode_decode_uint_wrapper    <unsigned char,   2>(        1, shift::buffer_position(17, 1));
+	test_encode_decode_uint_wrapper    <unsigned char,   2>(        2, shift::buffer_position(38, 7));
+	test_encode_decode_uint_wrapper    <unsigned char,   2>(max_v( 2), shift::buffer_position(63, 5));
+
+	test_encode_decode_uint_wrapper    <unsigned char,   5>(        0, shift::buffer_position( 0, 3));
+	test_encode_decode_uint_wrapper    <unsigned char,   5>(        5, shift::buffer_position(10, 4));
+	test_encode_decode_uint_wrapper    <unsigned char,   5>(       17, shift::buffer_position(33, 6));
+	test_encode_decode_uint_wrapper    <unsigned char,   5>(max_v( 5), shift::buffer_position(63, 7));
+
+	test_encode_decode_uint_wrapper    <unsigned short, 11>(      999, shift::buffer_position( 0, 1));
+	test_encode_decode_uint_wrapper    <unsigned short, 11>(        3, shift::buffer_position(17, 0));
+	test_encode_decode_uint_wrapper    <unsigned short, 11>(       15, shift::buffer_position(23, 6));
+	test_encode_decode_uint_wrapper    <unsigned short, 11>(max_v(11), shift::buffer_position(62, 2));
+
+	test_encode_decode_uint_wrapper    <unsigned short, 13>(     7777, shift::buffer_position( 0, 1));
+	test_encode_decode_uint_wrapper    <unsigned short, 13>(       55, shift::buffer_position( 5, 0));
+	test_encode_decode_uint_wrapper    <unsigned short, 13>(        7, shift::buffer_position(45, 3));
+	test_encode_decode_uint_wrapper    <unsigned short, 13>(max_v(13), shift::buffer_position(62, 4));
+
+	test_encode_decode_uint_wrapper    <unsigned int,   19>(        0, shift::buffer_position( 0, 3));
+	test_encode_decode_uint_wrapper    <unsigned int,   19>(   333333, shift::buffer_position(29, 0));
+	test_encode_decode_uint_wrapper    <unsigned int,   19>(    12345, shift::buffer_position(33, 7));
+	test_encode_decode_uint_wrapper    <unsigned int,   19>(max_v(19), shift::buffer_position(61, 2));
+
+	test_encode_decode_uint_wrapper    <unsigned int,   27>(        3, shift::buffer_position( 0, 0));
+	test_encode_decode_uint_wrapper    <unsigned int,   27>(   917291, shift::buffer_position(7,  2));
+	test_encode_decode_uint_wrapper    <unsigned int,   27>(  1234567, shift::buffer_position(56, 6));
+	test_encode_decode_uint_wrapper    <unsigned int,   27>(max_v(27), shift::buffer_position(60, 2));
 }
 
 TEST_CASE( "writing a fixed_width_uint<> does only modify the specified location in the buffer"
