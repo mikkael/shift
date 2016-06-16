@@ -7,6 +7,8 @@
 #ifndef SHIFT_TYPES_CONVERTER_HPP_
 #define SHIFT_TYPES_CONVERTER_HPP_
 
+#include <shift/types/fixed_width_uint.hpp>
+
 namespace shift {
 
 template<typename DecodedType, typename EncodedType>
@@ -70,6 +72,42 @@ public:
 private:
 	mutable decoded_type& value;
 	offset_type           offset;
+};
+
+template<typename DecodedType, typename EncodedType>
+class type_converter : public converter<DecodedType, EncodedType> {
+public:
+	typedef DecodedType decoded_type;
+	typedef EncodedType encoded_type;
+
+	struct params { };
+
+	type_converter(decoded_type& value                ) : value(value) {}
+	type_converter(decoded_type& value, params      p ) : value(value) {}
+
+	encoded_type encode()                 const { return  static_cast<encoded_type>(value); }
+	void         decode(encoded_type arg) const { value = static_cast<decoded_type>(arg  ); }
+
+private:
+	mutable decoded_type& value;
+};
+
+template<typename DecodedType, typename UintType, unsigned int NBits>
+class type_converter<DecodedType, shift::fixed_width_uint<UintType, NBits> > : public converter<DecodedType, shift::fixed_width_uint<UintType, NBits> > {
+public:
+	typedef DecodedType                              decoded_type;
+	typedef shift::fixed_width_uint<UintType, NBits> encoded_type;
+
+	struct params { };
+
+	type_converter(decoded_type& value                ) : value(value) {}
+	type_converter(decoded_type& value, params      p ) : value(value) {}
+
+	encoded_type encode()                 const { return  static_cast<encoded_type>( value); }
+	void         decode(encoded_type arg) const { value = static_cast<decoded_type>(*arg  ); }
+
+private:
+	mutable decoded_type& value;
 };
 
 }

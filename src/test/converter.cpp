@@ -486,4 +486,58 @@ TEST_CASE( "trying to extract with a converter beyond the size of a source resul
 	}
 }
 
+enum numbers { zero  = 0,
+               one   = 1,
+               two   = 2,
+               three = 3,
+               four  = 4 };
+
+TEST_CASE( "enums and fixed width uint encoding"
+         , "[uint, enum, fixed_width_uint]" )
+{
+	typedef shift::sink<shift::little_endian, shift::static_buffer<64> > sink_type;
+	sink_type sink;
+
+	numbers value = three;
+
+	try {
+		sink << shift::pos(0, 2) << shift::type_converter<numbers, shift::uint3_t>(value);
+		CHECK(sink.buffer()[0] == three);
+	} catch (shift::out_of_range& e) {
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+
+	typedef shift::source<shift::little_endian> source_type;
+	source_type source(sink.buffer(), sink.size());
+
+	try {
+		numbers result = zero;
+		source >> shift::pos(0, 2) >> shift::type_converter<numbers, shift::uint3_t>(result);
+		CHECK(result == value);
+	} catch (shift::out_of_range& e) {
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+
+	//
+
+	sink.clear();
+	value = two;
+	try {
+		sink << shift::pos(0, 4) << shift::type_converter<numbers, shift::uint3_t>(value);
+		CHECK(sink.buffer()[0] == value << 2);
+	} catch (shift::out_of_range& e) {
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+
+	try {
+		numbers result = zero;
+		source >> shift::pos(0, 4) >> shift::type_converter<numbers, shift::uint3_t>(result);
+		CHECK(result == value);
+	} catch (shift::out_of_range& e) {
+		std::cout << e.what() << " " << e.file() << " " << e.line() << std::endl;
+	}
+
+}
+
+
 }}
