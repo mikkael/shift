@@ -29,7 +29,7 @@ sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, Buff
 template<typename UintType, unsigned int NBits>
 struct iuint {
 	iuint(UintType& value) : value(value) {}
-	mutable UintType& value;
+	UintType& value;
 };
 
 template<endianness EncodingEndianness, typename UintType, unsigned int NBits>

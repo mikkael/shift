@@ -46,7 +46,7 @@ template<typename SizeType>
 class istring {
 public:
 	explicit istring(std::string& str) : str(str) {}
-	mutable std::string& str;
+	std::string& str;
 private:
 	template<endianness EncodingEndianness, typename SizeType_>
 	friend source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const istring<SizeType_>& str_);
@@ -61,7 +61,7 @@ template<>
 class istring<no_size_field> {
 public:
 	istring(std::string& str, unsigned int size) :str(str), size(size) {}
-	mutable std::string& str;
+	std::string& str;
 	const unsigned int size;
 private:
 	template<endianness EncodingEndianness, typename SizeType_>
@@ -77,7 +77,7 @@ template<unsigned int Size>
 class istring<static_size<Size> > {
 public:
 	explicit istring(std::string& str) : str(str) {}
-	mutable std::string& str;
+	std::string& str;
 	static const unsigned int size = Size;
 private:
 	template<endianness EncodingEndianness, typename SizeType_>
