@@ -16,6 +16,6 @@ template<      > struct assertion<false> {                  };
 
 #define SHIFT_STATIC_ASSERT(expr, message)                                                                          \
 		class  ERROR_ ## message{};                                                                                 \
-		enum   ENUM_ ## message { enum_##message##_value = sizeof((detail::assertion<expr>( ERROR_##message() ))) }
+		enum   ENUM_ ## message { enum_##message##_value = sizeof((shift::detail::assertion<expr>( ERROR_##message() ))) }
 
 #endif /* SRC_SHIFT_DETAIL_STATIC_ASSERT_HPP_ */
