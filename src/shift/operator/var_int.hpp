@@ -28,22 +28,37 @@ source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, va
 	return source_;
 }
 
-// var_int_2
+// var_width_int
 
 template<typename IntType>
-class var_int_2;
+struct ovar_int {
+	ovar_int(const IntType& value) : value(value){}
+	const IntType& value;
+};
+
+template<typename IntType>
+struct ivar_int{
+	ivar_int(IntType& value) : value(value){}
+	IntType& value;
+};
 
 template<endianness EncodingEndianness, typename BufferType, typename IntType>
-sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, BufferType>& sink_, const var_int_2<IntType> v) {
+sink<EncodingEndianness, BufferType>& operator << (sink<EncodingEndianness, BufferType>& sink_, const ovar_int<IntType>& v) {
 	detail::write_var_int(sink_, v.value);
 	return sink_;
 }
 
 template<endianness EncodingEndianness, typename IntType>
-source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, var_int_2<IntType>& v) {
+source<EncodingEndianness>& operator >> (source<EncodingEndianness>& source_, const ivar_int<IntType>& v) {
 	detail::read_var_int(source_, v.value);
 	return source_;
 }
+
+template<typename IntType>
+inline ovar_int<IntType> var_width_int(const IntType& ref) { return ovar_int<IntType>(ref); }
+
+template<typename IntType>
+inline ivar_int<IntType> var_width_int(      IntType& ref) { return ivar_int<IntType>(ref); }
 
 }
 
