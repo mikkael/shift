@@ -14,6 +14,7 @@ env = Environment( ENV = {'PATH' : os.environ['PATH']}
 env.Program('examples/examples', get_sources( [ 'examples' ] ))
 
 env.Program('test/test'        , get_sources( [ 'test'
+                                              , 'test/utility'
                                               , 'test/buffer'
                                               , 'test/detail'
                                               , 'test/encoding_decoding'
