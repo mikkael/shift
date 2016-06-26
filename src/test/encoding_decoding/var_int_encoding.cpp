@@ -6,6 +6,8 @@
 #include <shift/types/var_int.hpp>
 #include <shift/operator/var_int.hpp>
 #include <shift/buffer/static_buffer.hpp>
+#include <shift/utility/const_ref.hpp>
+#include <shift/utility/argument_traits.hpp>
 
 #include <examples/utility.hpp>
 
@@ -500,5 +502,250 @@ TEST_CASE( "variable length encoding and decoding of signed integers"
 
 	sink.clear();
 }
+
+///////////////////////
+///////////////////////
+///////////////////////
+
+//todo var_width_int : unsigned integers
+
+TEST_CASE( "variable length encoding and decoding of signed integers - var_width_int"
+         , "[var_width_int]")
+{
+	typedef shift::sink  <shift::little_endian, shift::static_buffer<64> > sink_type;
+	typedef shift::source<shift::little_endian>                            source_type;
+	typedef long long                                                      int_type;
+
+	sink_type sink;
+
+	// -4
+	// zig zag encoded -> 7
+
+	int_type value(-4);
+	sink << pos(0);
+	sink << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 7);
+
+	value = 0;
+	source_type source(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -4);
+
+	sink.clear();
+
+
+	// 4
+	// zig zag encoded -> 8
+
+	value = 4;
+	sink << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 8);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 4);
+
+	sink.clear();
+
+	// -13
+	// zig zag encoded -> 25
+
+	value = -13;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 25);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -13);
+
+	sink.clear();
+
+	// 13
+	// zig zag encoded -> 26
+
+	value = 13;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 26);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 13);
+
+	sink.clear();
+
+	// -60
+	// zig zag encoded: 119
+
+	value = -60;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 119);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -60);
+
+	sink.clear();
+
+	// 60
+	// zig zag encoded: 120
+
+	value = 60;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 1);
+	CHECK(sink.buffer()[0] == 120);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 60);
+
+	sink.clear();
+
+	// -187
+	// zig zag encoded: 373
+	// 373 = 2*128 + 117
+
+	value = -187;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 2);
+	CHECK(sink.buffer()[0] == 128 + 117);
+	CHECK(sink.buffer()[1] ==         2);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -187);
+
+	sink.clear();
+
+	// 187
+	// zig zag encoded: 374
+	// 374 = 2*128 + 118
+
+	value = 187;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 2);
+	CHECK(sink.buffer()[0] == 128 + 118);
+	CHECK(sink.buffer()[1] ==         2);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 187);
+
+	sink.clear();
+
+	// -33597
+	// zig zag encoded = 67193
+	// 67193 = 4 * 128 * 128 + 12 * 128 + 121
+
+	value = -33597;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 3);
+	CHECK(sink.buffer()[0] == 128 + 121);
+	CHECK(sink.buffer()[1] == 128 +  12);
+	CHECK(sink.buffer()[2] ==         4);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -33597);
+
+	sink.clear();
+
+	// 33597
+	// zig zag encoded = 67194
+	// 67194 = 4 * 128 * 128 + 12 * 128 + 122
+
+	value = 33597;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 3);
+	CHECK(sink.buffer()[0] == 128 + 122);
+	CHECK(sink.buffer()[1] == 128 +  12);
+	CHECK(sink.buffer()[2] ==         4);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 33597);
+
+	sink.clear();
+
+	// -17878060
+	// zig zag encoded: 35756119
+	// 35756119 = 17 * 128^3 + 6 * 128^2 + 48*128 + 87
+
+	value = -17878060;
+	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+
+	CHECK(sink.size() == 4);
+	CHECK(sink.buffer()[0] == 128 + 87);
+	CHECK(sink.buffer()[1] == 128 + 48);
+	CHECK(sink.buffer()[2] == 128 +  6);
+	CHECK(sink.buffer()[3] ==       17);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == -17878060);
+
+	sink.clear();
+
+	// 17878060
+	// zig zag encoded: 35756120
+	// 35756119 = 17 * 128^3 + 6 * 128^2 + 48*128 + 88
+
+	value = 17878060;
+//	sink << pos(0) << shift::var_width_int(shift::const_ref(value));
+	sink << pos(0) << shift::var_width_int(shift::ref<sink_type::mode>(value));
+
+	CHECK(sink.size() == 4);
+	CHECK(sink.buffer()[0] == 128 + 88);
+	CHECK(sink.buffer()[1] == 128 + 48);
+	CHECK(sink.buffer()[2] == 128 +  6);
+	CHECK(sink.buffer()[3] ==       17);
+
+	value = 0;
+	source = source_type(sink.buffer(), sink.size());
+	source >> pos(0) >> shift::var_width_int(value);
+
+	CHECK(value == 17878060);
+
+	sink.clear();
+}
+
+
+
+
 
 }} // test
