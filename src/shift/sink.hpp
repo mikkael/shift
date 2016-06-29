@@ -13,6 +13,7 @@
 #include <shift/detail/stream_operator_interface.hpp>
 #include <shift/detail/size_encoding.hpp>
 #include <shift/detail/utility.hpp>
+#include <shift/detail/endian_reversal.hpp>
 
 namespace shift {
 
@@ -72,18 +73,19 @@ private:
 	}
 
 	template<typename IntType, unsigned int NumBits>
-	void write(const fixed_width_uint<IntType, NumBits> value) {
+	void write(const fixed_width_uint<IntType, NumBits> v) {
+		const IntType value = base_type::requires_endianness_conversion() ? detail::endian_reverse(*v) : *v;
 		unsigned int n_bits = NumBits;
 		while(n_bits > 0){
 			if (n_bits > base_type::current_position_.bit_index+1) {
 				const unsigned int n_bits_to_encode = base_type::current_position_.bit_index + 1;
 				const unsigned int n_shifts         = n_bits - n_bits_to_encode;
-				const byte_type byte_value          = (buffer_.at(base_type::current_position_.byte_index) & inverse_bits(detail::bit_mask::get(n_bits_to_encode))) | (*value >> n_shifts);
+				const byte_type byte_value          = (buffer_.at(base_type::current_position_.byte_index) & inverse_bits(detail::bit_mask::get(n_bits_to_encode))) | (value >> n_shifts);
 				write(byte_value);
 				n_bits -= n_bits_to_encode;
 			} else {
 				const unsigned int n_shifts = (base_type::current_position_.bit_index + 1) - n_bits;
-				const byte_type byte_value  = (buffer_.at(base_type::current_position_.byte_index) & (inverse_bits(detail::bit_mask::get(n_bits) << n_shifts))) | (*value << n_shifts);
+				const byte_type byte_value  = (buffer_.at(base_type::current_position_.byte_index) & (inverse_bits(detail::bit_mask::get(n_bits) << n_shifts))) | (value << n_shifts);
 				write(byte_value);
 				n_bits = 0;
 			}

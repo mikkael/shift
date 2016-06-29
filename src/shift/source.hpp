@@ -15,6 +15,7 @@
 #include <shift/types/fixed_width_uint.hpp>
 #include <shift/detail/stream_operator_interface.hpp>
 #include <shift/detail/utility.hpp>
+#include <shift/detail/endian_reversal.hpp>
 
 namespace shift {
 
@@ -90,16 +91,16 @@ private:
 			if (n_bits > base_type::current_position_.bit_index + 1) {
 				const unsigned int n_bits_to_decode = base_type::current_position_.bit_index + 1;
 				const unsigned int n_shifts         = n_bits - n_bits_to_decode;
-				result = result | (get() & detail::bit_mask::get(n_bits_to_decode)) << n_shifts;
+				result = result | static_cast<IntType>((get() & detail::bit_mask::get(n_bits_to_decode))) << n_shifts;
 				n_bits -= n_bits_to_decode;
 			} else {
 				const unsigned int n_shifts = (base_type::current_position_.bit_index + 1) - n_bits;
-				result = result | ((get() >> n_shifts) & detail::bit_mask::get(n_bits));
+				result = result | static_cast<IntType>(((get() >> n_shifts) & detail::bit_mask::get(n_bits)));
 				n_bits  = 0;
 			}
 			base_type::current_position_.bit_index = 7;
 		}
-		value = result;
+		value = base_type::requires_endianness_conversion() ? detail::endian_reverse(result) : result;
 	}
 
 	const byte_type*     buffer_;
