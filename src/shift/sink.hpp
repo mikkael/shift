@@ -73,8 +73,8 @@ private:
 	}
 
 	template<typename IntType, unsigned int NumBits>
-	void write(const fixed_width_uint<IntType, NumBits> v) {
-		const IntType value = base_type::requires_endianness_conversion() ? detail::endian_reverse(*v) : *v;
+	void write_bits(const IntType v) {
+		const IntType value = base_type::requires_endianness_conversion() ? detail::endian_reverse(v) : v;
 		unsigned int n_bits = NumBits;
 		while(n_bits > 0){
 			if (n_bits > base_type::current_position_.bit_index+1) {

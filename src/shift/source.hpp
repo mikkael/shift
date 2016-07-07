@@ -84,7 +84,7 @@ private:
 	}
 
 	template<typename IntType, unsigned int NumBits>
-	void get(fixed_width_uint<IntType, NumBits>& value){
+	IntType get_bits(){
 		IntType result = 0;
 		unsigned int n_bits = NumBits;
 		while(n_bits > 0){
@@ -100,7 +100,7 @@ private:
 			}
 			base_type::current_position_.bit_index = 7;
 		}
-		value = base_type::requires_endianness_conversion() ? detail::endian_reverse(result) : result;
+		return base_type::requires_endianness_conversion() ? detail::endian_reverse(result) : result;
 	}
 
 	const byte_type*     buffer_;

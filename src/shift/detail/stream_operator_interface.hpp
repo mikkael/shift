@@ -32,7 +32,7 @@ struct ostream_operator_interface {
 
 	template<typename IntType, unsigned int NumBits>
 	inline static sink_type& write(sink_type& sink, const fixed_width_uint<IntType, NumBits> value) {
-		sink.write(value);
+		sink.template write_bits< IntType, NumBits >(*value);
 		return sink;
 	}
 
@@ -61,11 +61,10 @@ template<typename SourceType>
 struct istream_operator_interface {
 
 	typedef SourceType source_type;
-	typedef shift::byte_type byte_type;
 
 	template<typename IntType, unsigned int NumBits>
 	inline static void get(source_type& source, fixed_width_uint<IntType, NumBits>& value) {
-		source.get(value);
+		value = source.template get_bits<IntType, NumBits>();
 	}
 
 	inline static byte_type get(source_type& source) {
